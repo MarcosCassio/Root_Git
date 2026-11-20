@@ -29,6 +29,16 @@ def login(erro=''):
     autocomplete="current-password" maxlength="256" autofocus></label><button>Entrar</button></form></section>''', 'entrada')
 
 
+def configurar_senha(token, erro=''):
+    alerta = f'<p role="alert" class="erro">{escape(erro)}</p>' if erro else ''
+    return pagina('Criar senha', f'''<section class="login">{marca()}<h1>Criar senha familiar</h1>
+    <p>Use de 12 a 256 caracteres. Esta será a senha compartilhada da casa.</p>{alerta}
+    <form method="post" action="/configurar"><input type="hidden" name="token" value="{token}">
+    <label>Senha<input name="senha" type="password" required minlength="12" maxlength="256" autocomplete="new-password"></label>
+    <label>Confirmar senha<input name="repetir" type="password" required minlength="12" maxlength="256" autocomplete="new-password"></label>
+    <button>Criar senha e entrar</button></form></section>''', 'entrada')
+
+
 def tabela(cabecalhos, linhas, vazio):
     if not linhas:
         return f'<p class="vazio">{escape(vazio)}</p>'

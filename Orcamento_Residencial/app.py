@@ -10,9 +10,9 @@ import ssl
 import time
 from urllib.parse import parse_qs, urlsplit
 
-from dados import PASTA, chave, conectar, criar_sessao, preparar
+from dados import PASTA, acesso_configurado, chave, conectar, criar_sessao, preparar, primeiro_acesso
 from financeiro import centavos, mes_valido, resumo
-from telas import detalhe, login, painel
+from telas import configurar_senha, detalhe, login, painel
 
 
 def hoje():
@@ -79,6 +79,14 @@ class Aplicacao(BaseHTTPRequestHandler):
     def csrf(self):
         return chave('form:' + self.token())
 
+    def configuracao_local(self):
+        porta = self.server.server_port
+        hosts = {f'127.0.0.1:{porta}', f'localhost:{porta}'}
+        if porta == (443 if self.server.https else 80):
+            hosts.update(('127.0.0.1', 'localhost'))
+        return (self.server.local and self.client_address[0] == '127.0.0.1'
+                and self.headers.get('Host', '').casefold() in hosts)
+
     def do_GET(self):
         url = urlsplit(self.path)
         if url.path == '/estilo.css':
@@ -86,6 +94,8 @@ class Aplicacao(BaseHTTPRequestHandler):
         with conectar(self.server.banco) as db:
             casa = self.casa(db)
             if not casa:
+                if self.configuracao_local() and not acesso_configurado(db):
+                    return self.responder(configurar_senha(self.server.token_configuracao))
                 return self.responder(login())
             if url.path.startswith('/conta/') and url.path[7:].isdigit():
                 conta = db.execute('SELECT * FROM conta WHERE casa_id=? AND id=?', (casa, int(url.path[7:]))).fetchone()
@@ -123,6 +133,21 @@ class Aplicacao(BaseHTTPRequestHandler):
         if self.headers.get('Sec-Fetch-Site') == 'cross-site':
             return self.responder('Solicitação recusada.', 403)
         with conectar(self.server.banco) as db:
+            if rota == '/configurar':
+                if not self.configuracao_local() or not secrets.compare_digest(
+                    form.get('token', '').encode(), self.server.token_configuracao.encode()
+                ):
+                    return self.responder('Configuração indisponível.', 403)
+                if acesso_configurado(db):
+                    return self.redirecionar('/')
+                senha = form.get('senha', '')
+                if not 12 <= len(senha) <= 256 or senha != form.get('repetir'):
+                    return self.responder(configurar_senha(self.server.token_configuracao, 'Use de 12 a 256 caracteres e repita a mesma senha.'), 400)
+                if not primeiro_acesso(db, senha):
+                    return self.redirecionar('/')
+                token = criar_sessao(db, senha)
+                db.commit()
+                return self.redirecionar('/', Set_Cookie=self.cookie(token, 43_200))
             if rota == '/login':
                 senha = form.get('senha', '')
                 token = criar_sessao(db, senha) if len(senha) <= 256 else None
@@ -212,6 +237,8 @@ def servidor(banco, host, porta, contexto=None):
     inst = ThreadingHTTPServer((host, porta), Aplicacao)
     inst.banco = banco
     inst.https = bool(contexto)
+    inst.local = host in ('127.0.0.1', 'localhost')
+    inst.token_configuracao = secrets.token_urlsafe(32)
     if contexto:
         inst.socket = contexto.wrap_socket(inst.socket, server_side=True)
     return inst
@@ -226,13 +253,15 @@ def main():
     parser.add_argument('--certificado', type=Path)
     parser.add_argument('--chave', type=Path)
     args = parser.parse_args()
-    if args.configurar_senha or not preparar(args.banco):
+    if args.configurar_senha:
         senha = getpass('Senha familiar (12 a 256 caracteres): ')
         if not 12 <= len(senha) <= 256 or senha != getpass('Repita a senha: '):
             parser.error('As senhas devem coincidir e ter entre 12 e 256 caracteres.')
         preparar(args.banco, senha)
-        if args.configurar_senha:
-            return
+        return
+    configurado = preparar(args.banco)
+    if not configurado and args.host not in ('127.0.0.1', 'localhost'):
+        parser.error('Configure a senha pelo navegador local antes de abrir o acesso pela rede.')
     contexto = None
     if args.certificado and args.chave:
         contexto = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)

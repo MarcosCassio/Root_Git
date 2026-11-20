@@ -92,6 +92,38 @@ class OrcamentoTest(unittest.TestCase):
         with conectar(self.banco) as db:
             self.assertEqual(salvar(db, origem, linhas, True), 0)
 
+    def test_criacao_de_senha_local_uma_unica_vez(self):
+        banco = self.banco.with_name('novo.sqlite3')
+        self.assertFalse(preparar(banco))
+        http = servidor(banco, '127.0.0.1', 0)
+        self.addCleanup(http.server_close)
+        Thread(target=http.serve_forever, daemon=True).start()
+        self.addCleanup(http.shutdown)
+        cliente = HTTPConnection('127.0.0.1', http.server_port, timeout=5)
+        self.addCleanup(cliente.close)
+
+        cliente.request('GET', '/')
+        pagina = cliente.getresponse().read().decode()
+        token = re.search(r'name="token" value="([\w-]+)"', pagina)[1]
+        self.assertIn('Criar senha familiar', pagina)
+
+        def salvar_senha(senha, repetir, extras=None):
+            headers = {'Content-Type': 'application/x-www-form-urlencoded', **(extras or {})}
+            cliente.request('POST', '/configurar', urlencode(dict(token=token, senha=senha, repetir=repetir)), headers)
+            resposta = cliente.getresponse()
+            resposta.read()
+            return resposta
+
+        senha = 'credencial fictícia de teste'
+        self.assertEqual(salvar_senha(senha, senha, {'Host': 'outro.exemplo'}).status, 403)
+        self.assertEqual(salvar_senha(senha, 'diferente').status, 400)
+        self.assertFalse(preparar(banco))
+        self.assertIn('HttpOnly', salvar_senha(senha, senha).getheader('Set-Cookie'))
+        self.assertTrue(preparar(banco))
+        repeticao = salvar_senha('outra senha de teste', 'outra senha de teste')
+        self.assertEqual(repeticao.status, 303)
+        self.assertIsNone(repeticao.getheader('Set-Cookie'))
+
 
 if __name__ == '__main__':
     unittest.main()

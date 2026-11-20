@@ -10,7 +10,7 @@ No terminal do VS Code, abra a pasta `Orcamento_Residencial` e execute com Pytho
 python app.py
 ```
 
-Na primeira execução, defina a senha familiar quando solicitada no terminal. Abra `http://127.0.0.1:8000` no navegador. Os dados ficam em `dados/orcamento.sqlite3`, que está excluído do Git. Guarde cópias de segurança do banco com o app parado.
+Abra `http://127.0.0.1:8000` no navegador. Na primeira execução, crie e confirme a senha familiar na página. Os dados ficam em `dados/orcamento.sqlite3`, que está excluído do Git. Guarde cópias de segurança do banco com o app parado.
 
 Para trocar a senha e invalidar as sessões anteriores:
 

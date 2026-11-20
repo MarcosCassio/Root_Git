@@ -42,12 +42,27 @@ def derivar(senha, sal):
     return pbkdf2_hmac('sha256', senha.encode(), sal, 600_000)
 
 
+def acesso_configurado(db):
+    return bool(db.execute('SELECT 1 FROM acesso WHERE id=1').fetchone())
+
+
+def primeiro_acesso(db, senha):
+    sal = secrets.token_bytes(16)
+    segredo = derivar(senha, sal)
+    db.execute('BEGIN IMMEDIATE')
+    if acesso_configurado(db):
+        return False
+    db.execute("INSERT OR IGNORE INTO casa VALUES (1,'Orçamento familiar')")
+    db.execute('INSERT INTO acesso VALUES (1,1,?,?)', (sal, segredo))
+    return True
+
+
 def preparar(arquivo, senha=None):
     arquivo.parent.mkdir(parents=True, exist_ok=True)
     with conectar(arquivo) as db:
         db.executescript(SCHEMA)
         if senha is None:
-            return bool(db.execute('SELECT 1 FROM acesso').fetchone())
+            return acesso_configurado(db)
         if len(senha) < 12:
             raise ValueError('Use uma senha de pelo menos 12 caracteres.')
         sal = secrets.token_bytes(16)
