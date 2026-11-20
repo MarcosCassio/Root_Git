@@ -41,7 +41,7 @@ class Aplicacao(BaseHTTPRequestHandler):
         self.send_header('Cache-Control', 'no-store')
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Referrer-Policy', 'no-referrer')
-        self.send_header('Content-Security-Policy', "default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+        self.send_header('Content-Security-Policy', "default-src 'none'; style-src 'self'; script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
         for nome, valor in headers.items():
             self.send_header(nome.replace('_', '-'), valor)
         self.end_headers()
@@ -82,8 +82,10 @@ class Aplicacao(BaseHTTPRequestHandler):
 
     def do_GET(self):
         url = urlsplit(self.path)
-        if url.path == '/estilo.css':
-            return self.responder(Path(__file__).with_name('estilo.css').read_bytes(), tipo='text/css; charset=utf-8')
+        arquivos = {'/estilo.css': 'text/css', '/calendario.js': 'text/javascript'}
+        if url.path in arquivos:
+            conteudo = Path(__file__).with_name(url.path[1:]).read_bytes()
+            return self.responder(conteudo, tipo=arquivos[url.path] + '; charset=utf-8')
         with conectar(self.server.banco) as db:
             casa = self.casa(db)
             if not casa:

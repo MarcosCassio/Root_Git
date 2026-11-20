@@ -10,6 +10,7 @@ def pagina(titulo, corpo, classe=''):
     return f'''<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>{escape(titulo)} | Orçamento Residencial</title><link rel="stylesheet" href="/estilo.css">
+    <script src="/calendario.js" defer></script>
     </head><body class="{classe}"><main>{corpo}</main></body></html>'''
 
 
@@ -54,9 +55,15 @@ def data_br(data):
 def campo_data(nome, rotulo, inicial, periodo=False):
     formato = 'MM/AAAA' if periodo else 'DD/MM/AAAA'
     padrao = '[0-9]{2}/[0-9]{4}|[0-9]{6}' if periodo else '[0-9]{2}/[0-9]{2}/[0-9]{4}|[0-9]{8}'
-    return (f'<label>{rotulo} ({formato})<input name="{nome}" value="{data_br(inicial)}" '
+    tipo = 'month' if periodo else 'date'
+    acao = 'Escolher mês' if periodo else 'Abrir calendário'
+    return (f'<div class="campo-data" data-calendario="{tipo}"><label for="campo-{nome}">{rotulo} ({formato})</label>'
+            f'<div class="controle-data"><input id="campo-{nome}" name="{nome}" value="{data_br(inicial)}" '
             f'placeholder="{formato}" inputmode="numeric" autocomplete="off" '
-            f'maxlength="{len(formato)}" pattern="{padrao}" title="Formato {formato}" required></label>')
+            f'maxlength="{len(formato)}" pattern="{padrao}" title="Formato {formato}" required>'
+            f'<button class="secundario botao-calendario" type="button" aria-label="{acao}" title="{acao}" hidden>'
+            '<span class="icone-calendario" aria-hidden="true"></span></button>'
+            f'<input class="seletor-calendario" type="{tipo}" aria-label="{acao}" hidden></div></div>')
 
 
 def campo_texto(nome, rotulo, exemplo, requerido=False):

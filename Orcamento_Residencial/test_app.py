@@ -49,6 +49,9 @@ class OrcamentoTest(unittest.TestCase):
         self.assertIn('value="04/2020"', painel)
         self.assertIn('value="01/04/2020"', painel)
         self.assertIn('lang="pt-BR" spellcheck="true"', painel)
+        self.assertIn('data-calendario="month"', painel)
+        self.assertIn('aria-label="Abrir calendário"', painel)
+        self.assertEqual(solicitar('/calendario.js')[0].getheader('Content-Type'), 'text/javascript; charset=utf-8')
         self.assertEqual(solicitar('/estilo.css')[0].status, 200)
         csrf = re.search(r'name="csrf" value="(\w+)"', painel)[1]
         self.assertEqual(solicitar('/encerrar', dict(mes='2020-03'))[0].status, 403)
