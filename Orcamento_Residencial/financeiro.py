@@ -23,10 +23,32 @@ def centavos(texto):
 
 
 def mes_valido(mes):
+    mes = mes.strip()
+    mes_br = re.fullmatch(r'([0-9]{2})/?([0-9]{4})', mes)
+    if mes_br:
+        mes = f'{mes_br[2]}-{mes_br[1]}'
     if not re.fullmatch(r'\d{4}-(0[1-9]|1[0-2])', mes):
-        raise ValueError('Selecione um mês válido.')
-    date.fromisoformat(mes + '-01')
+        raise ValueError('Informe um período válido no formato MM/AAAA.')
+    try:
+        date.fromisoformat(mes + '-01')
+    except ValueError as exc:
+        raise ValueError('Informe um período válido no formato MM/AAAA.') from exc
     return mes
+
+
+def data_valida(texto):
+    texto = texto.strip()
+    brasileira = re.fullmatch(r'[0-9]{8}|[0-9]{2}/[0-9]{2}/[0-9]{4}', texto)
+    if brasileira:
+        digitos = texto.replace('/', '')
+        texto = f'{digitos[4:]}-{digitos[2:4]}-{digitos[:2]}'
+    try:
+        data = date.fromisoformat(texto).isoformat()
+        if texto == data:
+            return data
+    except ValueError:
+        pass
+    raise ValueError('Informe uma data válida no formato DD/MM/AAAA.')
 
 
 def resumo(db, casa, mes):

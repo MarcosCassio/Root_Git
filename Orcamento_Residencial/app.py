@@ -11,19 +11,12 @@ import time
 from urllib.parse import parse_qs, urlsplit
 
 from dados import PASTA, acesso_configurado, chave, conectar, criar_sessao, preparar, primeiro_acesso
-from financeiro import centavos, mes_valido, resumo
+from financeiro import centavos, data_valida, mes_valido, resumo
 from telas import configurar_senha, detalhe, login, painel
 
 
 def hoje():
     return datetime.now(timezone(timedelta(hours=-3))).date().isoformat()
-
-
-def data_valida(texto):
-    data = date.fromisoformat(texto).isoformat()
-    if texto != data:
-        raise ValueError('Informe a data no formato correto.')
-    return data
 
 
 def texto_curto(texto):
@@ -107,9 +100,9 @@ class Aplicacao(BaseHTTPRequestHandler):
             filtros = parse_qs(url.query)
             mes = filtros.get('mes', [hoje()[:7]])[0]
             try:
-                mes_valido(mes)
-            except ValueError:
-                return self.redirecionar('/')
+                mes = mes_valido(mes)
+            except ValueError as exc:
+                return self.responder(self.pagina(db, casa, hoje()[:7], str(exc)), 400)
             return self.responder(self.pagina(db, casa, mes, pessoa=filtros.get('pessoa', [''])[0]))
 
     def pagina(self, db, casa, mes, erro='', pessoa=''):

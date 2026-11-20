@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 
 from app import servidor
 from dados import conectar, preparar
-from financeiro import resumo
+from financeiro import data_valida, mes_valido, resumo
 from importar_planilha import salvar
 
 
@@ -44,8 +44,11 @@ class OrcamentoTest(unittest.TestCase):
         resposta, _ = solicitar('/login', dict(senha='senha fictícia de teste'))
         self.assertEqual(resposta.status, 303)
         cookie = resposta.getheader('Set-Cookie').split(';')[0]
-        painel = solicitar('/?mes=2020-04')[1]
+        painel = solicitar('/?mes=04%2F2020')[1]
         self.assertIn('Visão anual', painel)
+        self.assertIn('value="04/2020"', painel)
+        self.assertIn('value="01/04/2020"', painel)
+        self.assertIn('lang="pt-BR" spellcheck="true"', painel)
         self.assertEqual(solicitar('/estilo.css')[0].status, 200)
         csrf = re.search(r'name="csrf" value="(\w+)"', painel)[1]
         self.assertEqual(solicitar('/encerrar', dict(mes='2020-03'))[0].status, 403)
@@ -62,9 +65,9 @@ class OrcamentoTest(unittest.TestCase):
             postar('/encerrar', mes)
 
         conta = postar('/conta', tipo='despesa', descricao='Mercado de abril', categoria='alimento',
-                       vencimento='2020-04-30', previsto='80', confirmado='', variavel=1, repeticoes=2).split('/')[-1]
+                       vencimento='30/04/2020', previsto='80', confirmado='', variavel=1, repeticoes=2).split('/')[-1]
         postar('/confirmado', conta=conta, valor='100')
-        postar('/pagamento', conta=conta, data='2020-04-29', valor='40')
+        postar('/pagamento', conta=conta, data='29042020', valor='40')
         with conectar(self.banco) as db:
             dados = resumo(db, 1, '2020-04')
             self.assertEqual(dados['pendente']['despesa'], 6_000)
@@ -91,6 +94,14 @@ class OrcamentoTest(unittest.TestCase):
             self.assertEqual(dados['realizado']['despesa'], 20_000)
         with conectar(self.banco) as db:
             self.assertEqual(salvar(db, origem, linhas, True), 0)
+
+    def test_datas_brasileiras_e_validacao_do_calendario(self):
+        self.assertEqual(data_valida('29/02/2024'), '2024-02-29')
+        self.assertEqual(mes_valido('022024'), '2024-02')
+        with self.assertRaisesRegex(ValueError, 'DD/MM/AAAA'):
+            data_valida('29/02/2023')
+        with self.assertRaisesRegex(ValueError, 'MM/AAAA'):
+            mes_valido('13/2024')
 
     def test_criacao_de_senha_local_uma_unica_vez(self):
         banco = self.banco.with_name('novo.sqlite3')

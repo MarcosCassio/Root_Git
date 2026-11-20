@@ -12,6 +12,8 @@ python app.py
 
 Abra `http://127.0.0.1:8000` no navegador. Na primeira execução, crie e confirme a senha familiar na página. Os dados ficam em `dados/orcamento.sqlite3`, que está excluído do Git. Guarde cópias de segurança do banco com o app parado.
 
+As datas e os períodos usam `DD/MM/AAAA` e `MM/AAAA`, respectivamente. Também é possível digitá-los sem as barras. Os campos de descrição, categoria, pessoa e meio de pagamento indicam português do Brasil para a revisão ortográfica. A revisão depende do dicionário ativado no navegador.
+
 Para trocar a senha e invalidar as sessões anteriores:
 
 ```powershell

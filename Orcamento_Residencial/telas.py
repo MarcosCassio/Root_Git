@@ -51,6 +51,20 @@ def data_br(data):
     return '/'.join(reversed(data.split('-')))
 
 
+def campo_data(nome, rotulo, inicial, periodo=False):
+    formato = 'MM/AAAA' if periodo else 'DD/MM/AAAA'
+    padrao = '[0-9]{2}/[0-9]{4}|[0-9]{6}' if periodo else '[0-9]{2}/[0-9]{2}/[0-9]{4}|[0-9]{8}'
+    return (f'<label>{rotulo} ({formato})<input name="{nome}" value="{data_br(inicial)}" '
+            f'placeholder="{formato}" inputmode="numeric" autocomplete="off" '
+            f'maxlength="{len(formato)}" pattern="{padrao}" title="Formato {formato}" required></label>')
+
+
+def campo_texto(nome, rotulo, exemplo, requerido=False):
+    required = ' required' if requerido else ''
+    return (f'<label>{rotulo}<input name="{nome}" maxlength="100" placeholder="{exemplo}" '
+            f'lang="pt-BR" spellcheck="true"{required}></label>')
+
+
 def valor(dados):
     return dinheiro(dados) if dados is not None else '—'
 
@@ -107,20 +121,20 @@ def painel(mes, d, anual, csrf, hoje, fechado, erro='', pessoas=(), pessoa=''):
                      cartao('Resultado projetado', d['projetado'], f'{dinheiro(d["reserva"])} de reserva para variáveis', True)))
     return pagina(periodo, f'''<header>{marca()}<form method="post" action="/sair">{ctx}<button class="secundario">Sair</button></form></header>
     <div class="hero"><div><p class="rotulo">VISÃO MENSAL</p><h1>{periodo}</h1></div>
-    <form class="linha" method="get"><label>Período<input type="month" name="mes" value="{mes}" required></label><button class="secundario">Ver mês</button></form></div>
+    <form class="linha" method="get">{campo_data('mes','Período',mes,True)}<button class="secundario">Ver mês</button></form></div>
     {alerta}<div class="cards">{cards}</div>
     <nav aria-label="Seções"><a href="#contas">Lançamentos</a><a href="#projecao">Projeção variável</a><a href="#ano">Visão anual</a></nav>
     <section class="bloco" id="contas"><div class="titulo"><div><h2>Lançamentos</h2><p>Receitas e despesas por vencimento.</p></div>{botao_fechamento}</div>
     {filtro}
     {tabela(('Lançamento','Vencimento','Tipo','Previsto','Realizado','Pendente'), linhas, 'Nenhum lançamento neste mês.')}
     <details><summary>Novo lançamento</summary><form class="grade" method="post" action="/conta">{ctx}
-    <label>Descrição<input name="descricao" required maxlength="100" placeholder="Ex.: Conta de energia"></label>
+    {campo_texto('descricao','Descrição','Ex.: Conta de energia',True)}
     <label>Tipo<select name="tipo"><option value="despesa">Despesa</option><option value="receita">Receita</option></select></label>
-    <label>Categoria<input name="categoria" required maxlength="100" placeholder="Ex.: Energia"></label>
-    <label>Vencimento<input type="date" name="vencimento" value="{data_padrao}" required></label>
+    {campo_texto('categoria','Categoria','Ex.: Energia',True)}
+    {campo_data('vencimento','Vencimento',data_padrao)}
     {campo_valor('previsto','Valor previsto')}{campo_valor('confirmado','Valor confirmado',False)}
-    <label>Pessoa<input name="pessoa" maxlength="100" placeholder="Casa"></label>
-    <label>Conta, cartão ou meio de pagamento<input name="meio" maxlength="100" placeholder="Ex.: Cartão principal"></label>
+    {campo_texto('pessoa','Pessoa','Casa')}
+    {campo_texto('meio','Conta, cartão ou meio de pagamento','Ex.: Cartão principal')}
     <label>Quantidade de meses<input type="number" name="repeticoes" min="1" max="120" value="1" required></label>
     <label class="check"><input type="checkbox" name="variavel" value="1"> Despesa variável</label>
     <label class="check"><input type="checkbox" name="pontual" value="1"> Gasto pontual fora da média</label>
@@ -128,7 +142,7 @@ def painel(mes, d, anual, csrf, hoje, fechado, erro='', pessoas=(), pessoa=''):
     <section class="bloco" id="projecao"><h2>Projeção variável</h2><p>Meses completos usados na média · {base}</p>
     {tabela(('Categoria','Estimativa','Já comprometido','Reserva adicional'), previsoes, 'Adicione uma estimativa ou encerre meses com gastos variáveis registrados.')}
     <details><summary>Ajustar estimativa</summary><form class="grade" method="post" action="/estimativa">{ctx}
-    <label>Categoria<input name="categoria" required maxlength="100" placeholder="Ex.: Supermercado"></label>
+    {campo_texto('categoria','Categoria','Ex.: Supermercado',True)}
     {campo_valor('valor','Valor manual (vazio para voltar à média)',False)}<div><button>Salvar estimativa</button></div></form></details></section>
     <section class="bloco" id="ano"><h2>Visão anual · {ano}</h2>
     {tabela(('Mês','Receita prevista','Despesa prevista','Resultado em caixa','Resultado projetado'), anos, '')}</section>''')
@@ -151,7 +165,7 @@ def detalhe(conta, pagamentos, csrf, hoje):
     <p>{escape(conta['categoria'])} · {escape(conta['pessoa'])} · {escape(conta['meio'])} · Vence em {data_br(conta['vencimento'])}</p></div></div>
     <div class="cards">{cards}</div>
     <section class="bloco"><h2>Registrar {registro}</h2><form class="grade" method="post" action="/pagamento">{ctx}
-    <label>Data<input type="date" name="data" value="{hoje}" max="{hoje}" required></label>
+    {campo_data('data','Data',hoje)}
     {campo_valor('valor','Valor')}<div><button>Registrar</button></div></form>
     {tabela(('Data','Valor'), linhas, 'Nenhum movimento registrado.')}</section>
     <section class="bloco"><h2>Atualizar valor confirmado</h2><p>A previsão original continua disponível para comparação.</p>
