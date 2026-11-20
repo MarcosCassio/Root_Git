@@ -1,4 +1,4 @@
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from hashlib import pbkdf2_hmac, sha256
 from pathlib import Path
 import secrets
@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS pagamento (
 );
 CREATE TABLE IF NOT EXISTS mes_encerrado (casa_id INTEGER REFERENCES casa(id), mes TEXT, PRIMARY KEY(casa_id,mes));
 CREATE TABLE IF NOT EXISTS estimativa (casa_id INTEGER REFERENCES casa(id), mes TEXT, categoria TEXT COLLATE NOCASE, valor INTEGER NOT NULL CHECK(valor>=0), PRIMARY KEY(casa_id,mes,categoria));
+CREATE TABLE IF NOT EXISTS importacao (casa_id INTEGER REFERENCES casa(id), origem TEXT, celula TEXT, conta_id INTEGER NOT NULL REFERENCES conta(id), PRIMARY KEY(casa_id,origem,celula));
 CREATE INDEX IF NOT EXISTS conta_casa_data ON conta(casa_id,vencimento);
 CREATE INDEX IF NOT EXISTS pagamento_conta ON pagamento(conta_id);
 '''
@@ -31,14 +32,10 @@ CREATE INDEX IF NOT EXISTS pagamento_conta ON pagamento(conta_id);
 
 @contextmanager
 def conectar(arquivo):
-    with sqlite3.connect(arquivo) as db:
+    with closing(sqlite3.connect(arquivo)) as db, db:
         db.row_factory = sqlite3.Row
         db.execute('PRAGMA foreign_keys=ON')
-        try:
-            yield db
-        finally:
-            pass
-    db.close()
+        yield db
 
 
 def derivar(senha, sal):

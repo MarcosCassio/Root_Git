@@ -11,6 +11,8 @@ def dinheiro(valor):
 def centavos(texto):
     texto = str(texto).strip()
     if ',' in texto:
+        if not re.fullmatch(r'(\d+|\d{1,3}(\.\d{3})+),\d{1,2}', texto):
+            raise ValueError('Informe um valor válido com até duas casas decimais.')
         texto = texto.replace('.', '').replace(',', '.')
     if not re.fullmatch(r'\d{1,10}(\.\d{1,2})?', texto):
         raise ValueError('Informe um valor válido com até duas casas decimais.')
@@ -46,7 +48,7 @@ def resumo(db, casa, mes):
         previsto[c['tipo']] += c['previsto']
         valor = c['confirmado'] if c['confirmado'] is not None else c['previsto']
         pendente[c['tipo']] += max(0, valor - c['pago'])
-        if c['tipo'] == 'despesa' and c['variavel']:
+        if c['tipo'] == 'despesa' and c['variavel'] and not c['pontual']:
             variavel_comprometido[c['categoria']] += max(valor, c['pago'])
 
     meses = [r['mes'] for r in db.execute('''
